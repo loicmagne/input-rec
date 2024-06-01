@@ -36,12 +36,12 @@
             "bundleId": "com.example.obs-plugintemplate"
         }
     },
-    "name": "obs-plugintemplate",
-    "displayName": "OBS Plugin Template",
-    "version": "1.0.0",
-    "author": "Your Name Here",
-    "website": "https://example.com",
-    "email": "me@example.com",
+    "name": "input-rec",
+    "displayName": "OBS Input Recorder",
+    "version": "0.1.0",
+    "author": "Loïc Magne",
+    "website": "https://github.com/loicmagne",
+    "email": "loic.magne@outlook.com",
     "uuids": {
         "windowsApp": "00000000-0000-0000-0000-000000000000"
     }
