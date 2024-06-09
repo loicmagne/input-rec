@@ -9,7 +9,7 @@ configure:
 
 # Build the project
 install:
-	cmake --build $(BUILD_DIR) --target install
+	sudo cmake --build $(BUILD_DIR) --target install
 
 # Clean the build directory
 clean:
