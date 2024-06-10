@@ -3,6 +3,11 @@ BUILD_DIR = build
 # Targets
 all: configure install
 
+# Pull both main and submodules
+pull:
+	git submodule update --init --recursive
+	git submodule foreach git pull origin
+
 # Run CMake configuration
 configure:
 	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_FLAGS="-Wall"
