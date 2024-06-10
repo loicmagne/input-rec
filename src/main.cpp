@@ -21,11 +21,13 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <input_source.hpp>
 #include <obs-frontend-api.h>
 #include <atomic>
+#include <iostream>
+#include <SDL3/SDL.h>
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-long double time {0.};
+long double t {0.};
 bool first_frame {true};
 std::atomic<bool> is_recording {false};
 
@@ -56,15 +58,23 @@ bool obs_module_load(void) {
 		UNUSED_PARAMETER(param);
         if (is_recording) {
 			if (first_frame) {
-				time = 0.;
+				t = 0.;
 				first_frame = false;
 			} else {
-				time += seconds;
+				t += seconds;
 			}
-			obs_log(LOG_INFO, "time: %Lf", time);
+			obs_log(LOG_INFO, "time: %Lf", t);
 		}
 	}, nullptr);
-	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "AYAAA input-rec (version %s) loaded successfully", PLUGIN_VERSION);
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		obs_log(LOG_ERROR, "SDL_Init Error: %s", SDL_GetError());
+        return 1;
+    }
+
+	obs_log(LOG_INFO, "SDL_Init succeeded!");
+
+    SDL_Quit();
 	return true;
 }
 

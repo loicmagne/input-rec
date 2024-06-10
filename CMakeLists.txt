@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.16...3.26)
 
+option(SDL_SYSTEM "Use system SDL library" OFF)
+set(SDL_STATIC ON CACHE BOOL "Build the static version of SDL" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "Do not build the shared version of SDL" FORCE)
+set(SDL_STATIC_PIC ${SDL_STATIC})
+
+if(SDL_SYSTEM)
+  find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
+else()
+  add_subdirectory(deps/SDL EXCLUDE_FROM_ALL)
+endif()
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
 
 project(${_name} VERSION ${_version})
@@ -39,5 +50,8 @@ set(SOURCES
   src/input_source.cpp
 )
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES})
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Include SDL3 headers
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE SDL3::SDL3)

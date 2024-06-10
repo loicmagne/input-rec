@@ -1,11 +1,11 @@
-BUILD_DIR = Build
+BUILD_DIR = build
 
 # Targets
 all: configure install
 
 # Run CMake configuration
 configure:
-	cmake -S . -B $(BUILD_DIR)
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_FLAGS="-Wall"
 
 # Build the project
 install:
