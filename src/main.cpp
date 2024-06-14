@@ -1,6 +1,6 @@
 /*
-Plugin Name
-Copyright (C) <Year> <Developer> <Email Address>
+input-rec
+Copyright (C) 2023 lm loic.magne@outlook.com
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -66,11 +66,7 @@ bool obs_module_load(void) {
 			obs_log(LOG_INFO, "time: %Lf", t);
 		}
 	}, nullptr);
-	obs_log(LOG_INFO, "AYAAA input-rec (version %s) loaded successfully", PLUGIN_VERSION);
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-		obs_log(LOG_ERROR, "SDL_Init Error: %s", SDL_GetError());
-        return 1;
-    }
+	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully", PLUGIN_VERSION);
 
 	obs_log(LOG_INFO, "SDL_Init succeeded!");
 
