@@ -33,7 +33,9 @@ def align(
             t_micro = (
                 cap.get(cv2.CAP_PROP_POS_MSEC) * 1000
             )  # Frame timestamp in microseconds
-            while inputs["time"][i] < t_micro:  # Find the closest timestamp in inputs
+            while (
+                inputs["time"][i] < t_micro and i < inputs.shape[0] - 1
+            ):  # Find the closest timestamp in inputs
                 i += 1
 
             # Pick the closest timestamp between the two neighbors
