@@ -25,7 +25,6 @@ std::filesystem::path home_path() {
 #else
     path = getenv("HOME");
 #endif
-    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!! HOME PATH: " << path << std::endl;
     return (path != nullptr) ? std::filesystem::path(path) : default_path;
 }
 
