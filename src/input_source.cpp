@@ -1,100 +1,37 @@
-#include <input_source.hpp>
-#include <obs-module.h>
-#include <plugin-support.h>
-#include <obs-frontend-api.h>
-#include <vector>
+
 #include <thread>
 #include <iostream>
-#include <SDL3/SDL.h>
 #include <chrono>
 #include <atomic>
-typedef std::chrono::high_resolution_clock Clock;
+#include <fstream>
+#include <filesystem>
+
+#include <obs-module.h>
+#include <obs-frontend-api.h>
+
+#include "input_source.hpp"
+#include "plugin-support.h"
+#include "utils.hpp"
+#include "globals.hpp"
 
 constexpr int16_t AXIS_DEADZONE = 0;
 
-std::string axis_to_string(SDL_GamepadAxis axis) {
-    switch (axis)
-    {
-    case SDL_GAMEPAD_AXIS_LEFTX:
-        return "LEFTX";
-    case SDL_GAMEPAD_AXIS_LEFTY:
-        return "LEFTY";
-    case SDL_GAMEPAD_AXIS_RIGHTX:
-        return "RIGHTX";
-    case SDL_GAMEPAD_AXIS_RIGHTY:
-        return "RIGHTY";
-    case SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
-        return "LEFT_TRIGGER";
-    case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
-        return "RIGHT_TRIGGER";
-    default:
-        return "UNKNOWN";
-    }
+std::filesystem::path home_path() {
+    const std::filesystem::path default_path {"/tmp"};
+    char* path;
+#ifdef _WIN32
+    path = getenv("USERPROFILE");
+    if (path == nullptr) path = getenv("HOMEPATH"); // Alternative on Windows
+#else
+    path = getenv("HOME");
+#endif
+    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!! HOME PATH: " << path << std::endl;
+    return (path != nullptr) ? std::filesystem::path(path) : default_path;
 }
 
-std::string button_to_string(SDL_GamepadButton button) {
-    switch (button)
-    {
-    case SDL_GAMEPAD_BUTTON_SOUTH:
-        return "SOUTH";
-    case SDL_GAMEPAD_BUTTON_EAST:
-        return "EAST";
-    case SDL_GAMEPAD_BUTTON_WEST:
-        return "WEST";
-    case SDL_GAMEPAD_BUTTON_NORTH:
-        return "NORTH";
-    case SDL_GAMEPAD_BUTTON_BACK:
-        return "BACK";
-    case SDL_GAMEPAD_BUTTON_GUIDE:
-        return "GUIDE";
-    case SDL_GAMEPAD_BUTTON_START:
-        return "START";
-    case SDL_GAMEPAD_BUTTON_LEFT_STICK:
-        return "LEFT_STICK";
-    case SDL_GAMEPAD_BUTTON_RIGHT_STICK:
-        return "RIGHT_STICK";
-    case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
-        return "LEFT_SHOULDER";
-    case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
-        return "RIGHT_SHOULDER";
-    case SDL_GAMEPAD_BUTTON_DPAD_UP:
-        return "DPAD_UP";
-    case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-        return "DPAD_DOWN";
-    case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-        return "DPAD_LEFT";
-    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-        return "DPAD_RIGHT";
-    case SDL_GAMEPAD_BUTTON_MISC1:
-        return "MISC1";
-    case SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1:
-        return "RIGHT_PADDLE1";
-    case SDL_GAMEPAD_BUTTON_LEFT_PADDLE1:
-        return "LEFT_PADDLE1";
-    case SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2:
-        return "RIGHT_PADDLE2";
-    case SDL_GAMEPAD_BUTTON_LEFT_PADDLE2:
-        return "LEFT_PADDLE2";
-    case SDL_GAMEPAD_BUTTON_TOUCHPAD:
-        return "TOUCHPAD";
-    case SDL_GAMEPAD_BUTTON_MISC2:
-        return "MISC2";
-    case SDL_GAMEPAD_BUTTON_MISC3:
-        return "MISC3";
-    case SDL_GAMEPAD_BUTTON_MISC4:
-        return "MISC4";
-    case SDL_GAMEPAD_BUTTON_MISC5:
-        return "MISC5";
-    case SDL_GAMEPAD_BUTTON_MISC6:
-        return "MISC6";
-    case SDL_GAMEPAD_BUTTON_MAX:
-        return "MAX";
-    default:
-        return "UNKNOWN";
-    }
-}
-
-gamepad_manager::gamepad_manager(/* args */) {
+gamepad_manager::gamepad_manager():
+    m_file(home_path()/"input_recording.csv", std::ios::out)
+{
 	/* Init SDL, see SDL/test/testcontroller.c */
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
@@ -118,8 +55,8 @@ gamepad_manager::gamepad_manager(/* args */) {
         SDL_Log("\n");
         SDL_free(mappings);
     }
-
     init_gamepads();
+    setup_file();
 }
 
 void gamepad_manager::init_gamepads() {
@@ -161,41 +98,49 @@ SDL_Gamepad* gamepad_manager::active_gamepad() {
     return nullptr;
 }
 
+void gamepad_manager::setup_file() {
+    m_file << "time,";
+    for (int i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
+        m_file << button_to_string((SDL_GamepadButton)i) << ", ";
+    }
+    for (int i = 0; i < SDL_GAMEPAD_AXIS_MAX; ++i) {
+        m_file << axis_to_string((SDL_GamepadAxis)i) << ", ";
+    }
+    m_file << std::endl;
+}
+
 void gamepad_manager::save_gamepad_state() {
     SDL_Gamepad* gamepad = active_gamepad();
     // Print number of gamepads
     if (gamepad) {
-        auto now = Clock::now();
-        auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-        auto epoch = now_ms.time_since_epoch();
-        auto t = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
-        std::cout << SDL_GAMEPAD_BUTTON_MAX << " " << SDL_GAMEPAD_BUTTON_TOUCHPAD << std::endl;
-        std::cout << t.count() << " ";
+        auto dt = REC_TIMER.elapsed();
+        if (!dt) return;
+        std::cout << *dt << std::endl;
 
         int i;
+        m_file << *dt << ",";
         for (i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
             const SDL_GamepadButton button = (SDL_GamepadButton)i;
             const bool pressed = SDL_GetGamepadButton(gamepad, button) == SDL_PRESSED;
-            std::cout << "(" << button_to_string(button) << "," << pressed << ") ";
-
+            m_file << pressed << ",";
         }
 
         for (i = 0; i < SDL_GAMEPAD_AXIS_MAX; ++i) {
             const SDL_GamepadAxis axis = (SDL_GamepadAxis)i;
             int16_t value = SDL_GetGamepadAxis(gamepad, axis);
             value = (value < AXIS_DEADZONE && value > -AXIS_DEADZONE) ? 0 : value;
-            std::cout << "(" << axis_to_string(axis) << "," << value << ") ";
+            m_file << value << ",";
         }
 
-        std::cout << std::endl;
+        m_file << std::endl;
     }
-
 }
 
 gamepad_manager::~gamepad_manager() {
     for (auto gamepad : m_gamepads) {
         SDL_CloseGamepad(gamepad);
     }
+    m_file.close();
     SDL_Quit();
 }
 

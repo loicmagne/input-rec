@@ -16,20 +16,22 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
-#include <obs-module.h>
-#include <plugin-support.h>
-#include <input_source.hpp>
-#include <obs-frontend-api.h>
 #include <atomic>
 #include <iostream>
+
+#include <obs-module.h>
+#include <obs-frontend-api.h>
 #include <SDL3/SDL.h>
+
+#include "plugin-support.h"
+#include "input_source.hpp"
+#include "utils.hpp"
+#include "globals.hpp"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-long double t {0.};
-bool first_frame {true};
-std::atomic<bool> is_recording {false};
+rec_timer REC_TIMER;
 
 bool obs_module_load(void) {
 	if (!initialize_rec_source()) {
@@ -42,35 +44,18 @@ bool obs_module_load(void) {
 		switch (event) {
 		case OBS_FRONTEND_EVENT_RECORDING_STARTING:
 			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTING received");
-			is_recording = true;
+			REC_TIMER.start();
 			break;
 		case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
 			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
-			is_recording = false;
-			first_frame = true;
+			REC_TIMER.stop();
 			break;
 		default:
 			break;
 		}
 	}, nullptr);
 
-	obs_add_tick_callback([](void *param, float seconds) {
-		UNUSED_PARAMETER(param);
-        if (is_recording) {
-			if (first_frame) {
-				t = 0.;
-				first_frame = false;
-			} else {
-				t += seconds;
-			}
-			obs_log(LOG_INFO, "time: %Lf", t);
-		}
-	}, nullptr);
 	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully", PLUGIN_VERSION);
-
-	obs_log(LOG_INFO, "SDL_Init succeeded!");
-
-    SDL_Quit();
 	return true;
 }
 

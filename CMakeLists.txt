@@ -48,6 +48,7 @@ endif()
 set(SOURCES
   src/main.cpp
   src/input_source.cpp
+  src/utils.cpp
 )
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES})
 
