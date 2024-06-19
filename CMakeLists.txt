@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16...3.26)
 
+set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
+
 option(SDL_SYSTEM "Use system SDL library" OFF)
 set(SDL_STATIC ON CACHE BOOL "Build the static version of SDL" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "Do not build the shared version of SDL" FORCE)
