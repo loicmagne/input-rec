@@ -8,7 +8,7 @@ version = "0.1.0"
 authors = [
     { name="Loïc Magne", email="loic.magne@outlook.com" },
 ]
-description = "Tool to align a video recording with an input recording"
+description = "Utilities for recording inputs"
 dependencies = [
     "polars>=0.20.31",
     "opencv-python>=4.10.0.82",

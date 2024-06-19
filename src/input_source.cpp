@@ -38,7 +38,7 @@ gamepad_manager::gamepad_manager():
     SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_LINUX_DEADZONES, "1");
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD) != 0) {
+	if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD) != 0) {
 		obs_log(LOG_ERROR, "SDL_Init Error: %s", SDL_GetError());
     }
 
@@ -157,10 +157,12 @@ void gamepad_manager::loop() {
             remove_gamepad(event.gdevice.which);
             std::cout << "Gamepad removed" << std::endl;
             break;
+        default:
+            break;
         }
     }
     save_gamepad_state();
-    SDL_Delay(5);
+    SDL_Delay(2);
 }
 
 int gamepad_manager::get_gamepad_idx(SDL_JoystickID joystickid) {

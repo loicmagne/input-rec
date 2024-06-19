@@ -42,8 +42,8 @@ bool obs_module_load(void) {
 	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
 		UNUSED_PARAMETER(private_data);
 		switch (event) {
-		case OBS_FRONTEND_EVENT_RECORDING_STARTING:
-			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTING received");
+		case OBS_FRONTEND_EVENT_RECORDING_STARTED:
+			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTED received");
 			REC_TIMER.start();
 			break;
 		case OBS_FRONTEND_EVENT_RECORDING_STOPPING:

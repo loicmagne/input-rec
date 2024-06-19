@@ -66,6 +66,7 @@ def align(
 def viz(
     path_video: str,
     path_inputs: str,
+    offset: int = 0,
 ):
     """
     Run the video and display the inputs at the bottom of the screen
@@ -103,6 +104,9 @@ def viz(
         frame_data = df.row(current_frame, named=True)
         if frame is None:
             break
+        if current_frame < offset:
+            current_frame = offset
+            continue
 
         frame = cv2.resize(frame, (800, 600))
         new_width = frame.shape[1] + 200
@@ -151,7 +155,7 @@ def cli_align(args):
 
 
 def cli_viz(args):
-    viz(args.video, args.inputs)
+    viz(args.video, args.inputs, args.o)
 
 
 def cli_main():
@@ -172,6 +176,7 @@ def cli_main():
     viz_parser = subparsers.add_parser("viz", help="Visualize inputs on video")
     viz_parser.add_argument("video", help="Path to video file")
     viz_parser.add_argument("inputs", help="Path to inputs .parquet file")
+    viz_parser.add_argument("-o", type=int, default=0, help="Offset to start from")
     viz_parser.set_defaults(func=cli_viz)
 
     args = parser.parse_args()

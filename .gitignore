@@ -17,7 +17,7 @@
 !LICENSE
 !README.md
 !Makefile
-!/align-rec
+!/irec
 
 # Exclude lock files
 *.lock.json
