@@ -8,14 +8,14 @@
 std::string axis_to_string(SDL_GamepadAxis axis);
 std::string button_to_string(SDL_GamepadButton button);
 
-class rec_timer
-{
+class rec_timer {
 private:
-    std::chrono::high_resolution_clock::time_point m_start;
-    std::atomic<bool> m_running{false};
+	std::chrono::high_resolution_clock::time_point m_start;
+	std::atomic<bool> m_running{false};
+
 public:
-    rec_timer();
-    void start();
-    void stop();
-    std::optional<int64_t> elapsed();
+	rec_timer();
+	void start();
+	void stop();
+	std::optional<int64_t> elapsed();
 };

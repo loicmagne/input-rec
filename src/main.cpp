@@ -33,32 +33,39 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 rec_timer REC_TIMER;
 
-bool obs_module_load(void) {
+bool obs_module_load(void)
+{
 	if (!initialize_rec_source()) {
 		obs_log(LOG_ERROR, "input-rec failed to load");
 		return false;
 	}
 
-	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
-		UNUSED_PARAMETER(private_data);
-		switch (event) {
-		case OBS_FRONTEND_EVENT_RECORDING_STARTED:
-			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTED received");
-			REC_TIMER.start();
-			break;
-		case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
-			obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
-			REC_TIMER.stop();
-			break;
-		default:
-			break;
-		}
-	}, nullptr);
+	obs_frontend_add_event_callback(
+		[](enum obs_frontend_event event, void *private_data) {
+			UNUSED_PARAMETER(private_data);
+			switch (event) {
+			case OBS_FRONTEND_EVENT_RECORDING_STARTED:
+				obs_log(LOG_INFO,
+					"OBS_FRONTEND_EVENT_RECORDING_STARTED received");
+				REC_TIMER.start();
+				break;
+			case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
+				obs_log(LOG_INFO,
+					"OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
+				REC_TIMER.stop();
+				break;
+			default:
+				break;
+			}
+		},
+		nullptr);
 
-	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully",
+		PLUGIN_VERSION);
 	return true;
 }
 
-void obs_module_unload(void) {
+void obs_module_unload(void)
+{
 	obs_log(LOG_INFO, "input-rec unloaded");
 }
