@@ -1,4 +1,5 @@
 #pragma once
 #include "utils.hpp"
+#include <memory>
 
-extern rec_timer REC_TIMER;
+extern std::unique_ptr<rec_timer> REC_TIMER;

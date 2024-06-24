@@ -31,10 +31,12 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-rec_timer REC_TIMER;
+std::unique_ptr<rec_timer> REC_TIMER;
 
 bool obs_module_load(void)
 {
+	REC_TIMER = std::make_unique<rec_timer>();
+
 	if (!initialize_rec_source()) {
 		obs_log(LOG_ERROR, "input-rec failed to load");
 		return false;
@@ -47,12 +49,12 @@ bool obs_module_load(void)
 			case OBS_FRONTEND_EVENT_RECORDING_STARTED:
 				obs_log(LOG_INFO,
 					"OBS_FRONTEND_EVENT_RECORDING_STARTED received");
-				REC_TIMER.start();
+				REC_TIMER->start();
 				break;
 			case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
 				obs_log(LOG_INFO,
 					"OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
-				REC_TIMER.stop();
+				REC_TIMER->stop();
 				break;
 			default:
 				break;
@@ -67,5 +69,6 @@ bool obs_module_load(void)
 
 void obs_module_unload(void)
 {
+	REC_TIMER.reset();
 	obs_log(LOG_INFO, "input-rec unloaded");
 }

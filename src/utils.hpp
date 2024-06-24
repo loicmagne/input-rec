@@ -15,6 +15,7 @@ private:
 
 public:
 	rec_timer();
+	~rec_timer();
 	void start();
 	void stop();
 	std::optional<int64_t> elapsed();

@@ -45,17 +45,19 @@ gamepad_manager::gamepad_manager()
 	}
 
 	SDL_AddGamepadMappingsFromFile("gamecontrollerdb.txt");
-	if (true) {
-		int count = 0;
-		char **mappings = SDL_GetGamepadMappings(&count);
-		int map_i;
-		SDL_Log("Supported mappings:\n");
-		for (map_i = 0; map_i < count; ++map_i) {
-			SDL_Log("\t%s\n", mappings[map_i]);
-		}
-		SDL_Log("\n");
-		SDL_free(mappings);
+
+#ifdef DEBUG
+	int count = 0;
+	char **mappings = SDL_GetGamepadMappings(&count);
+	int map_i;
+	SDL_Log("Supported mappings:\n");
+	for (map_i = 0; map_i < count; ++map_i) {
+		SDL_Log("\t%s\n", mappings[map_i]);
 	}
+	SDL_Log("\n");
+	SDL_free(mappings);
+#endif
+
 	init_gamepads();
 	setup_file();
 }
@@ -122,10 +124,9 @@ void gamepad_manager::save_gamepad_state()
 	SDL_Gamepad *gamepad = active_gamepad();
 	// Print number of gamepads
 	if (gamepad) {
-		auto dt = REC_TIMER.elapsed();
+		auto dt = REC_TIMER->elapsed();
 		if (!dt)
 			return;
-		std::cout << *dt << std::endl;
 
 		int i;
 		m_file << *dt << ",";

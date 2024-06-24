@@ -5,6 +5,11 @@ rec_timer::rec_timer() : m_start(std::chrono::high_resolution_clock::now())
 	std::cout << "Timer created" << std::endl;
 }
 
+rec_timer::~rec_timer()
+{
+	std::cout << "Timer destroyed" << std::endl;
+}
+
 void rec_timer::start()
 {
 	m_start = std::chrono::high_resolution_clock::now();
