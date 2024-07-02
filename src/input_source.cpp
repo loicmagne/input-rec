@@ -111,10 +111,10 @@ void gamepad_manager::setup_file()
 {
 	m_file << "time,";
 	for (int i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
-		m_file << button_to_string((SDL_GamepadButton)i) << ", ";
+		m_file << button_to_string((SDL_GamepadButton)i) << ",";
 	}
 	for (int i = 0; i < SDL_GAMEPAD_AXIS_MAX; ++i) {
-		m_file << axis_to_string((SDL_GamepadAxis)i) << ", ";
+		m_file << axis_to_string((SDL_GamepadAxis)i) << ",";
 	}
 	m_file << std::endl;
 }
