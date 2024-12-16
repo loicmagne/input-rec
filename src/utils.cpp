@@ -109,7 +109,7 @@ std::string button_to_string(SDL_GamepadButton button)
 		return "MISC5";
 	case SDL_GAMEPAD_BUTTON_MISC6:
 		return "MISC6";
-	case SDL_GAMEPAD_BUTTON_MAX:
+	case SDL_GAMEPAD_BUTTON_COUNT:
 		return "MAX";
 	default:
 		return "UNKNOWN";

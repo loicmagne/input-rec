@@ -113,7 +113,7 @@ void gamepad_manager::setup_file()
 	for (int i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
 		m_file << button_to_string((SDL_GamepadButton)i) << ",";
 	}
-	for (int i = 0; i < SDL_GAMEPAD_AXIS_MAX; ++i) {
+	for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i) {
 		m_file << axis_to_string((SDL_GamepadAxis)i) << ",";
 	}
 	m_file << std::endl;
@@ -133,12 +133,11 @@ void gamepad_manager::save_gamepad_state()
 		for (i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
 			const SDL_GamepadButton button = (SDL_GamepadButton)i;
 			const bool pressed =
-				SDL_GetGamepadButton(gamepad, button) ==
-				SDL_PRESSED;
+				SDL_GetGamepadButton(gamepad, button) == true;
 			m_file << pressed << ",";
 		}
 
-		for (i = 0; i < SDL_GAMEPAD_AXIS_MAX; ++i) {
+		for (i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i) {
 			const SDL_GamepadAxis axis = (SDL_GamepadAxis)i;
 			int16_t value = SDL_GetGamepadAxis(gamepad, axis);
 			value = (value < AXIS_DEADZONE &&
@@ -191,7 +190,7 @@ int gamepad_manager::get_gamepad_idx(SDL_JoystickID joystickid)
 			SDL_Joystick *joystick =
 				SDL_GetGamepadJoystick(m_gamepads[i]);
 			if (joystick &&
-			    SDL_GetJoystickInstanceID(joystick) == joystickid) {
+			    SDL_GetJoystickID(joystick) == joystickid) {
 				return static_cast<int>(i);
 			}
 		}

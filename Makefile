@@ -1,7 +1,5 @@
-BUILD_DIR = build
-
 # Targets
-all: configure install
+all: configure build install
 
 # Pull both main and submodules
 pull:
@@ -10,11 +8,14 @@ pull:
 
 # Run CMake configuration
 configure:
-	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_FLAGS="-Wall"
+	cmake --preset linux-x86_64 -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/x86_64-linux-gnu
+
+build:
+	cmake --build --preset linux-x86_64
 
 # Build the project
 install:
-	sudo cmake --build $(BUILD_DIR) --target install
+	sudo cmake --install build_x86_64
 
 # Clean the build directory
 clean:
