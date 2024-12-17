@@ -19,6 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <atomic>
 #include <iostream>
 
+#include <duckdb.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <SDL3/SDL.h>
@@ -32,9 +33,18 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 std::unique_ptr<rec_timer> REC_TIMER;
+duckdb_database db;
+duckdb_connection con;
 
 bool obs_module_load(void)
 {
+	if (duckdb_open(NULL, &db) == DuckDBError) {
+		obs_log(LOG_ERROR, "Failed to open DuckDB database");
+	}
+	if (duckdb_connect(db, &con) == DuckDBError) {
+		obs_log(LOG_ERROR, "Failed to connect to DuckDB database");
+	}
+
 	REC_TIMER = std::make_unique<rec_timer>();
 
 	if (!initialize_rec_source()) {
@@ -69,6 +79,8 @@ bool obs_module_load(void)
 
 void obs_module_unload(void)
 {
+	duckdb_disconnect(&con);
+	duckdb_close(&db);
 	REC_TIMER.reset();
 	obs_log(LOG_INFO, "input-rec unloaded");
 }
