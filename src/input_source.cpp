@@ -1,5 +1,3 @@
-
-#include <thread>
 #include <iostream>
 #include <chrono>
 #include <atomic>
@@ -11,8 +9,6 @@
 
 #include "input_source.hpp"
 #include "plugin-support.h"
-#include "utils.hpp"
-#include "globals.hpp"
 
 constexpr int16_t AXIS_DEADZONE = 0;
 
@@ -30,8 +26,7 @@ std::filesystem::path home_path()
 	return (path != nullptr) ? std::filesystem::path(path) : default_path;
 }
 
-gamepad_manager::gamepad_manager()
-	: m_file(home_path() / "input_recording.csv", std::ios::out)
+gamepad_manager::gamepad_manager() : m_timer{}
 {
 	/* Init SDL, see SDL/test/testcontroller.c */
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
@@ -59,7 +54,6 @@ gamepad_manager::gamepad_manager()
 #endif
 
 	init_gamepads();
-	setup_file();
 }
 
 void gamepad_manager::init_gamepads()
@@ -88,6 +82,21 @@ void gamepad_manager::add_gamepad(SDL_JoystickID joystickid)
 	}
 }
 
+int gamepad_manager::get_gamepad_idx(SDL_JoystickID joystickid)
+{
+	for (size_t i = 0; i < m_gamepads.size(); ++i) {
+		if (m_gamepads[i]) {
+			SDL_Joystick *joystick =
+				SDL_GetGamepadJoystick(m_gamepads[i]);
+			if (joystick &&
+			    SDL_GetJoystickID(joystick) == joystickid) {
+				return static_cast<int>(i);
+			}
+		}
+	}
+	return -1;
+}
+
 void gamepad_manager::remove_gamepad(SDL_JoystickID joystickid)
 {
 	int i = get_gamepad_idx(joystickid);
@@ -107,24 +116,12 @@ SDL_Gamepad *gamepad_manager::active_gamepad()
 	return nullptr;
 }
 
-void gamepad_manager::setup_file()
-{
-	m_file << "time,";
-	for (int i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
-		m_file << button_to_string((SDL_GamepadButton)i) << ",";
-	}
-	for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i) {
-		m_file << axis_to_string((SDL_GamepadAxis)i) << ",";
-	}
-	m_file << std::endl;
-}
-
 void gamepad_manager::save_gamepad_state()
 {
 	SDL_Gamepad *gamepad = active_gamepad();
 	// Print number of gamepads
 	if (gamepad) {
-		auto dt = REC_TIMER->elapsed();
+		auto dt = m_timer.elapsed();
 		if (!dt)
 			return;
 
@@ -153,6 +150,10 @@ void gamepad_manager::save_gamepad_state()
 
 gamepad_manager::~gamepad_manager()
 {
+	m_running = false;
+	if (m_thread_loop.joinable()) {
+		m_thread_loop.join();
+	}
 	for (auto gamepad : m_gamepads) {
 		SDL_CloseGamepad(gamepad);
 	}
@@ -183,48 +184,97 @@ void gamepad_manager::loop()
 	SDL_Delay(2);
 }
 
-int gamepad_manager::get_gamepad_idx(SDL_JoystickID joystickid)
+void gamepad_manager::prepare_recording()
 {
-	for (size_t i = 0; i < m_gamepads.size(); ++i) {
-		if (m_gamepads[i]) {
-			SDL_Joystick *joystick =
-				SDL_GetGamepadJoystick(m_gamepads[i]);
-			if (joystick &&
-			    SDL_GetJoystickID(joystick) == joystickid) {
-				return static_cast<int>(i);
-			}
-		}
+	std::filesystem::path path = home_path() / "gamepad_recording.csv";
+	m_file.open(path, std::ios::out | std::ios::trunc);
+
+	if (!m_file.is_open()) {
+		std::cerr << "Failed to open file: " << path << std::endl;
+		return;
 	}
-	return -1;
+
+	m_file << "time,";
+	for (int i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
+		m_file << button_to_string((SDL_GamepadButton)i) << ",";
+	}
+	for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i) {
+		m_file << axis_to_string((SDL_GamepadAxis)i) << ",";
+	}
+	m_file << std::endl;
 }
 
-class input_rec {
+void gamepad_manager::start_recording()
+{
+	m_timer.start();
+	m_running = true;
+
+	m_thread_loop = std::thread([this]() {
+		while (m_running) {
+			loop();
+		}
+	});
+}
+
+void gamepad_manager::stop_recording()
+{
+	m_timer.stop();
+	m_running = false;
+	if (m_thread_loop.joinable())
+		m_thread_loop.join();
+}
+
+void gamepad_manager::close_recording()
+{
+	// Close file
+	m_file.close();
+}
+
+class rec_source {
 private:
 	obs_data_t *m_settings;
 	obs_source_t *m_source;
 	gamepad_manager m_gamepad_manager;
-	std::thread m_thread;
-	std::atomic<bool> m_running{true};
 
 public:
-	input_rec(obs_data_t *settings, obs_source_t *source)
+	rec_source(obs_data_t *settings, obs_source_t *source)
 		: m_settings{settings},
 		  m_source{source},
 		  m_gamepad_manager{}
 	{
-		m_thread = std::thread([this]() {
-			while (m_running) {
-				m_gamepad_manager.loop();
-			}
-		});
-	}
 
-	~input_rec()
-	{
-		std::cout << "Destroying input_rec" << std::endl;
-		m_running = false;
-		if (m_thread.joinable())
-			m_thread.join();
+		obs_frontend_add_event_callback(
+			[](enum obs_frontend_event event, void *private_data) {
+				gamepad_manager *current_gpm =
+					static_cast<gamepad_manager *>(
+						private_data);
+				switch (event) {
+				case OBS_FRONTEND_EVENT_RECORDING_STARTING:
+					obs_log(LOG_INFO,
+						"OBS_FRONTEND_EVENT_RECORDING_STARTING received");
+					current_gpm->prepare_recording();
+					break;
+				case OBS_FRONTEND_EVENT_RECORDING_STARTED:
+					obs_log(LOG_INFO,
+						"OBS_FRONTEND_EVENT_RECORDING_STARTED received");
+					current_gpm->start_recording();
+					break;
+				case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
+					obs_log(LOG_INFO,
+						"OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
+					current_gpm->stop_recording();
+					break;
+				case OBS_FRONTEND_EVENT_RECORDING_STOPPED:
+					obs_log(LOG_INFO,
+						"OBS_FRONTEND_EVENT_RECORDING_STOPPED received");
+					current_gpm->close_recording();
+					break;
+				default:
+					break;
+				}
+			},
+			// pass gamepad_manager instance as private_data
+			&m_gamepad_manager);
 	}
 
 	void tick(float seconds) { UNUSED_PARAMETER(seconds); }
@@ -249,13 +299,13 @@ bool initialize_rec_source()
 	};
 	source_info.create = [](obs_data_t *settings,
 				obs_source_t *source) -> void * {
-		return static_cast<void *>(new input_rec(settings, source));
+		return static_cast<void *>(new rec_source(settings, source));
 	};
 	source_info.destroy = [](void *data) {
-		delete static_cast<input_rec *>(data);
+		delete static_cast<rec_source *>(data);
 	};
 	source_info.video_tick = [](void *data, float seconds) {
-		static_cast<input_rec *>(data)->tick(seconds);
+		static_cast<rec_source *>(data)->tick(seconds);
 	};
 	obs_register_source(&source_info);
 	return true;

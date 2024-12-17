@@ -4,6 +4,7 @@
 #include <iostream>
 #include <atomic>
 #include <optional>
+#include <string>
 
 std::string axis_to_string(SDL_GamepadAxis axis);
 std::string button_to_string(SDL_GamepadButton button);
