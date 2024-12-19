@@ -28,8 +28,7 @@ std::optional<int64_t> rec_timer::elapsed()
 	if (!m_running)
 		return std::nullopt;
 	auto now = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-		now - m_start);
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(now - m_start);
 	auto dt = duration.count();
 	return dt;
 }

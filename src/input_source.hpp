@@ -4,12 +4,14 @@
 #include <thread>
 #include <SDL3/SDL.h>
 #include <fstream>
+#include <filesystem>
 #include "utils.hpp"
 
 class gamepad_manager {
 private:
 	std::vector<SDL_Gamepad *> m_gamepads;
 	std::ofstream m_file;
+	std::filesystem::path m_file_path;
 	rec_timer m_timer;
 	std::atomic<bool> m_running{false};
 	std::thread m_thread_loop;
@@ -27,7 +29,7 @@ public:
 	void prepare_recording();
 	void start_recording();
 	void stop_recording();
-	void close_recording();
+	void close_recording(std::string recording_path);
 };
 
 bool initialize_rec_source();

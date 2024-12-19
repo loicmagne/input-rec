@@ -3,6 +3,7 @@
 #include <atomic>
 #include <fstream>
 #include <filesystem>
+#include <random>
 
 #include <obs-module.h>
 #include <obs-frontend-api.h>
@@ -10,32 +11,21 @@
 #include "input_source.hpp"
 #include "plugin-support.h"
 
-constexpr int16_t AXIS_DEADZONE = 0;
+namespace fs = std::filesystem;
 
-std::filesystem::path home_path()
-{
-	const std::filesystem::path default_path{"/tmp"};
-	char *path;
-#ifdef _WIN32
-	path = getenv("USERPROFILE");
-	if (path == nullptr)
-		path = getenv("HOMEPATH"); // Alternative on Windows
-#else
-	path = getenv("HOME");
-#endif
-	return (path != nullptr) ? std::filesystem::path(path) : default_path;
-}
+constexpr int16_t AXIS_DEADZONE = 0;
 
 gamepad_manager::gamepad_manager() : m_timer{}
 {
 	/* Init SDL, see SDL/test/testcontroller.c */
+	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_LINUX_DEADZONES, "1");
-	if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD) != 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD) != 0) {
 		obs_log(LOG_ERROR, "SDL_Init Error: %s", SDL_GetError());
 	}
 
@@ -66,8 +56,7 @@ void gamepad_manager::init_gamepads()
 		}
 		SDL_free(joystick_ids);
 	} else {
-		std::cerr << "Failed to get gamepads: " << SDL_GetError()
-			  << std::endl;
+		std::cerr << "Failed to get gamepads: " << SDL_GetError() << std::endl;
 	}
 }
 
@@ -77,8 +66,7 @@ void gamepad_manager::add_gamepad(SDL_JoystickID joystickid)
 	if (gamepad) {
 		m_gamepads.push_back(gamepad);
 	} else {
-		std::cerr << "Failed to open gamepad: " << SDL_GetError()
-			  << std::endl;
+		std::cerr << "Failed to open gamepad: " << SDL_GetError() << std::endl;
 	}
 }
 
@@ -86,10 +74,8 @@ int gamepad_manager::get_gamepad_idx(SDL_JoystickID joystickid)
 {
 	for (size_t i = 0; i < m_gamepads.size(); ++i) {
 		if (m_gamepads[i]) {
-			SDL_Joystick *joystick =
-				SDL_GetGamepadJoystick(m_gamepads[i]);
-			if (joystick &&
-			    SDL_GetJoystickID(joystick) == joystickid) {
+			SDL_Joystick *joystick = SDL_GetGamepadJoystick(m_gamepads[i]);
+			if (joystick && SDL_GetJoystickID(joystick) == joystickid) {
 				return static_cast<int>(i);
 			}
 		}
@@ -129,18 +115,14 @@ void gamepad_manager::save_gamepad_state()
 		m_file << *dt << ",";
 		for (i = 0; i < SDL_GAMEPAD_BUTTON_TOUCHPAD; ++i) {
 			const SDL_GamepadButton button = (SDL_GamepadButton)i;
-			const bool pressed =
-				SDL_GetGamepadButton(gamepad, button) == true;
+			const bool pressed = SDL_GetGamepadButton(gamepad, button) == true;
 			m_file << pressed << ",";
 		}
 
 		for (i = 0; i < SDL_GAMEPAD_AXIS_COUNT; ++i) {
 			const SDL_GamepadAxis axis = (SDL_GamepadAxis)i;
 			int16_t value = SDL_GetGamepadAxis(gamepad, axis);
-			value = (value < AXIS_DEADZONE &&
-				 value > -AXIS_DEADZONE)
-					? 0
-					: value;
+			value = (value < AXIS_DEADZONE && value > -AXIS_DEADZONE) ? 0 : value;
 			m_file << value << ",";
 		}
 
@@ -165,8 +147,7 @@ void gamepad_manager::loop()
 {
 	SDL_Event event;
 	SDL_PumpEvents();
-	while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_FIRST,
-			      SDL_EVENT_LAST) == 1) {
+	while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
 		switch (event.type) {
 		case SDL_EVENT_GAMEPAD_ADDED:
 			add_gamepad(event.gdevice.which);
@@ -186,11 +167,13 @@ void gamepad_manager::loop()
 
 void gamepad_manager::prepare_recording()
 {
-	std::filesystem::path path = home_path() / "gamepad_recording.csv";
-	m_file.open(path, std::ios::out | std::ios::trunc);
+	// Create tmp file with random name
+	m_file_path = fs::temp_directory_path() /
+		      fs::path("obs_input_rec_" + std::to_string(std::random_device{}()) + ".csv");
+	m_file.open(m_file_path, std::ios::trunc);
 
 	if (!m_file.is_open()) {
-		std::cerr << "Failed to open file: " << path << std::endl;
+		std::cerr << "Failed to open file: " << m_file_path << std::endl;
 		return;
 	}
 
@@ -224,10 +207,12 @@ void gamepad_manager::stop_recording()
 		m_thread_loop.join();
 }
 
-void gamepad_manager::close_recording()
+void gamepad_manager::close_recording(std::string recording_path)
 {
-	// Close file
+	// Close file and move it to the recording path with a .csv extension
 	m_file.close();
+	fs::path recording_csv = fs::path(recording_path).replace_extension(".csv");
+	fs::rename(m_file_path, recording_csv);
 }
 
 class rec_source {
@@ -245,30 +230,30 @@ public:
 
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *private_data) {
-				gamepad_manager *current_gpm =
-					static_cast<gamepad_manager *>(
-						private_data);
+				gamepad_manager *current_gpm = static_cast<gamepad_manager *>(private_data);
 				switch (event) {
-				case OBS_FRONTEND_EVENT_RECORDING_STARTING:
-					obs_log(LOG_INFO,
-						"OBS_FRONTEND_EVENT_RECORDING_STARTING received");
+				case OBS_FRONTEND_EVENT_RECORDING_STARTING: {
+					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTING received");
 					current_gpm->prepare_recording();
 					break;
-				case OBS_FRONTEND_EVENT_RECORDING_STARTED:
-					obs_log(LOG_INFO,
-						"OBS_FRONTEND_EVENT_RECORDING_STARTED received");
+				}
+				case OBS_FRONTEND_EVENT_RECORDING_STARTED: {
+					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTED received");
 					current_gpm->start_recording();
 					break;
-				case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
-					obs_log(LOG_INFO,
-						"OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
+				}
+				case OBS_FRONTEND_EVENT_RECORDING_STOPPING: {
+					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
 					current_gpm->stop_recording();
 					break;
-				case OBS_FRONTEND_EVENT_RECORDING_STOPPED:
-					obs_log(LOG_INFO,
-						"OBS_FRONTEND_EVENT_RECORDING_STOPPED received");
-					current_gpm->close_recording();
+				}
+				case OBS_FRONTEND_EVENT_RECORDING_STOPPED: {
+					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPED received");
+					// Get last recording path
+					std::string recording_path{obs_frontend_get_last_recording()};
+					current_gpm->close_recording(recording_path);
 					break;
+				}
 				default:
 					break;
 				}
@@ -297,8 +282,7 @@ bool initialize_rec_source()
 	source_info.get_height = [](void *) -> uint32_t {
 		return 0;
 	};
-	source_info.create = [](obs_data_t *settings,
-				obs_source_t *source) -> void * {
+	source_info.create = [](obs_data_t *settings, obs_source_t *source) -> void * {
 		return static_cast<void *>(new rec_source(settings, source));
 	};
 	source_info.destroy = [](void *data) {
