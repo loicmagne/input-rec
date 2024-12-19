@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.16...3.26)
 
 set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
 
-if(WIN32)
-    set(CMAKE_GENERATOR_PLATFORM x64)
-endif()
-
 # Include dependencies configurations
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/deps/sdl.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/deps/duckdb.cmake)
@@ -50,12 +46,18 @@ set(SOURCES
 )
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES})
 
+# Include SDL3 headers
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE SDL3::SDL3)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE DuckDB::duckdb)
 
-if(APPLE)
-    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES 
-        LINK_FLAGS "-Wl,-force_load,$<TARGET_FILE:duckdb_static>")
+if(WIN32)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
+        DuckDB::duckdb
+        DuckDB::duckdb_api
+    )
+else()
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
+        DuckDB::duckdb
+    )
 endif()

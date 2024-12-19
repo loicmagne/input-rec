@@ -145,7 +145,7 @@
       "configurePreset": "windows-x64",
       "displayName": "Windows x64",
       "description": "Windows build for x64",
-      "configuration": "RelWithDebInfo"
+      "configuration": "Release"
     },
     {
       "name": "windows-ci-x64",
