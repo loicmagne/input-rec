@@ -25,9 +25,13 @@ gamepad_manager::gamepad_manager() : m_timer{}
 	SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_LINUX_DEADZONES, "1");
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD) != 0) {
-		obs_log(LOG_ERROR, "SDL_Init Error: %s", SDL_GetError());
-	}
+
+    /* Enable input debug logging */
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_INPUT, SDL_LOG_PRIORITY_DEBUG);
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
+        return;
+    }
 
 	SDL_AddGamepadMappingsFromFile("gamecontrollerdb.txt");
 
@@ -53,6 +57,7 @@ void gamepad_manager::init_gamepads()
 	if (joystick_ids) {
 		for (int i = 0; i < count; ++i) {
 			add_gamepad(joystick_ids[i]);
+			std::cout << "Gamepad added: " << joystick_ids[i] << std::endl;
 		}
 		SDL_free(joystick_ids);
 	} else {

@@ -50,14 +50,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES})
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE SDL3::SDL3)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE DuckDB::duckdb)
 
+# required on windows to build a static library
 if(WIN32)
-    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
-        DuckDB::duckdb
-        DuckDB::duckdb_api
-    )
-else()
-    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
-        DuckDB::duckdb
-    )
+  target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE DUCKDB_STATIC_BUILD)
 endif()
