@@ -5,6 +5,7 @@
 #include "device/gamepad.hpp"
 #include "writer/input_writer.hpp"
 #include "writer/csv.hpp"
+#include "writer/parquet.hpp"
 #include "obs_source.hpp"
 #include "plugin-support.h"
 
@@ -18,7 +19,7 @@ public:
 	RecSource(obs_data_t *settings, obs_source_t *source)
 		: m_settings{settings},
 		  m_source{source},
-		  m_input_writer{std::make_unique<CSVWriter>(std::make_unique<GamepadDevice>())}
+		  m_input_writer{std::make_unique<ParquetWriter>(std::make_unique<GamepadDevice>())}
 	{
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *private_data) {
