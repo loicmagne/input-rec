@@ -1,6 +1,7 @@
 #include "csv.hpp"
 #include <random>
 #include <iostream>
+#include <string>
 
 namespace fs = std::filesystem;
 
