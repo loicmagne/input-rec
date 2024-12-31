@@ -11,6 +11,7 @@ configure:
 	cmake --preset linux-x86_64 -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/x86_64-linux-gnu
 
 build:
+	cmake --preset linux-x86_64 -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/x86_64-linux-gnu
 	cmake --build --preset linux-x86_64
 
 # Build the project

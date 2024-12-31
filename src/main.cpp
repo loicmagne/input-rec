@@ -22,11 +22,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <duckdb.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
-#include <SDL3/SDL.h>
 
 #include "plugin-support.h"
-#include "input_source.hpp"
-#include "utils.hpp"
+#include "obs_source.hpp"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
@@ -36,12 +34,8 @@ bool obs_module_load(void)
 	// Dummy duckdb code, open a database and close it
 	duckdb_database db;
 	duckdb_connection con;
-	if (duckdb_open(NULL, &db) == DuckDBError) {
-		obs_log(LOG_ERROR, "Failed to open database");
-	}
-	if (duckdb_connect(db, &con) == DuckDBError) {
-		obs_log(LOG_ERROR, "Failed to connect to database");
-	}
+	if (duckdb_open(NULL, &db) == DuckDBError) obs_log(LOG_ERROR, "Failed to open database");
+	if (duckdb_connect(db, &con) == DuckDBError) obs_log(LOG_ERROR, "Failed to connect to database");
 	duckdb_query(con, "SELECT 42", NULL);
 	duckdb_disconnect(&con);
 	duckdb_close(&db);
@@ -52,10 +46,8 @@ bool obs_module_load(void)
 	}
 
 	obs_log(LOG_INFO, "input-rec (version %s) loaded successfully", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "input-rec version UwU");
 	return true;
 }
 
-void obs_module_unload(void)
-{
-	obs_log(LOG_INFO, "input-rec unloaded");
-}
+void obs_module_unload(void) { obs_log(LOG_INFO, "input-rec unloaded"); }

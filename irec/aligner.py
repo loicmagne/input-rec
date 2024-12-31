@@ -72,10 +72,11 @@ def viz(
     Run the video and display the inputs at the bottom of the screen
     Pressing 'q' will exit the video
     Pressing space will pause the video
-    Pressing 'j' will go back 1 frame
-    Pressing 'k' will go forward 1 frame
-    Pressing 'l' will go forward 10 frames
-    Pressing 'h' will go back 10 frames
+    When paused:
+        'j' will go back 1 frame
+        'k' will go forward 1 frame
+        'l' will go forward 10 frames
+        'h' will go back 10 frames
     """
 
     # Load video
@@ -87,27 +88,35 @@ def viz(
     df = pl.read_parquet(path_inputs)
 
     N = df.shape[0]
+
+    # Store frames in memory for backward seeking
+    frames = []
     current_frame = 0
     paused = False
 
-    def get_frame(cap, frame_number):
-        """Get the current frame of the video capture"""
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to retrieve frame.")
-            return None
-        return frame
+    def read_up_to_frame(target_frame):
+        """Read frames sequentially until reaching target_frame"""
+        nonlocal frames
+        while len(frames) <= target_frame:
+            ret, frame = cap.read()
+            if not ret:
+                return False
+            frames.append(frame)
+        return True
 
-    while cap.isOpened():
-        frame = get_frame(cap, current_frame)
-        frame_data = df.row(current_frame, named=True)
-        if frame is None:
+    while True:
+        # Ensure we have the current frame
+        if not read_up_to_frame(current_frame):
             break
+
+        frame = frames[current_frame]
+        frame_data = df.row(current_frame, named=True)
+
         if current_frame < offset:
             current_frame = offset
             continue
 
+        # Resize and create display frame
         frame = cv2.resize(frame, (800, 600))
         new_width = frame.shape[1] + 200
         frame_show = np.zeros((frame.shape[0], new_width, 3), dtype=np.uint8)
@@ -133,16 +142,18 @@ def viz(
             break
         elif key == ord(" "):
             paused = not paused
-        elif key == ord("j") and current_frame > 0:
-            current_frame -= 1
-        elif key == ord("k") and current_frame < N - 1:
-            current_frame += 1
-        elif key == ord("l") and current_frame < N - 10:
-            current_frame += 10
-        elif key == ord("h") and current_frame > 9:
-            current_frame -= 10
 
-        if not paused:
+        # Only allow frame navigation when paused
+        if paused:
+            if key == ord("j") and current_frame > 0:
+                current_frame -= 1
+            elif key == ord("k") and current_frame < N - 1:
+                current_frame += 1
+            elif key == ord("l") and current_frame < N - 10:
+                current_frame += 10
+            elif key == ord("h") and current_frame > 9:
+                current_frame -= 10
+        elif not paused:
             current_frame += 1
 
     # Cleanup

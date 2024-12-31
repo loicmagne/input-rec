@@ -39,16 +39,14 @@ if(ENABLE_QT)
                AUTORCC ON)
 endif()
 
-set(SOURCES
-  src/main.cpp
-  src/input_source.cpp
-  src/utils.cpp
-)
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES})
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE HEADERS "src/*.hpp")
 
-# Include SDL3 headers
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${SOURCES} ${HEADERS})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Add third-party dependencies
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE SDL3::SDL3)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE DuckDB::duckdb)
 
