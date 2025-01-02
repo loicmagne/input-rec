@@ -92,40 +92,6 @@ SDL_Gamepad *GamepadDevice::active_gamepad()
 
 GamepadDevice::GamepadDevice() : m_should_poll(true)
 {
-    m_polling_thread = std::thread(&GamepadDevice::polling_loop, this);
-}
-
-GamepadDevice::~GamepadDevice()
-{
-	m_should_poll = false;
-	if (m_polling_thread.joinable()) m_polling_thread.join();
-	for (auto gamepad : m_gamepads) { SDL_CloseGamepad(gamepad); }
-	SDL_Quit();
-}
-
-void GamepadDevice::polling_iter()
-{
-	SDL_Event event;
-	SDL_PumpEvents();
-
-	std::lock_guard<std::mutex> lock(m_gamepads_mutex); // lock the gamepads vector for the whole iteration
-	while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
-		switch (event.type) {
-		case SDL_EVENT_GAMEPAD_ADDED:
-			add_gamepad(event.gdevice.which);
-			obs_log(LOG_INFO, "Gamepad added %d", event.gdevice.which);
-			break;
-		case SDL_EVENT_GAMEPAD_REMOVED:
-			remove_gamepad(event.gdevice.which);
-			obs_log(LOG_INFO, "Gamepad removed %d", event.gdevice.which);
-			break;
-		default: break;
-		}
-	}
-}
-
-void GamepadDevice::polling_loop()
-{
 	/* Init SDL, see SDL/test/testcontroller.c */
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
@@ -134,12 +100,11 @@ void GamepadDevice::polling_loop()
 	SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_LINUX_DEADZONES, "1");
-	SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH_HOME_LED, "1");
 
 	/* Enable input debug logging */
 	SDL_SetLogPriority(SDL_LOG_CATEGORY_INPUT, SDL_LOG_PRIORITY_DEBUG);
-	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD)) {
+	if (!SDL_Init(SDL_INIT_GAMEPAD)) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
 		return;
 	}
@@ -170,6 +135,48 @@ void GamepadDevice::polling_loop()
 	*/
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
+	m_polling_thread = SDL_CreateThread([](void *data) -> int {
+		static_cast<GamepadDevice *>(data)->polling_loop();
+		return 0;
+	}, "SDL Gamepad capture", this);
+}
+
+GamepadDevice::~GamepadDevice()
+{
+	m_should_poll = false;
+	SDL_WaitThread(m_polling_thread, NULL);
+	for (auto gamepad : m_gamepads) { SDL_CloseGamepad(gamepad); }
+	SDL_Quit();
+}
+
+void GamepadDevice::polling_iter()
+{
+	SDL_Event events[32];
+	int i, n;
+	SDL_UpdateGamepads();
+
+	std::lock_guard<std::mutex> lock(m_gamepads_mutex); // lock the gamepads vector for the whole iteration
+	while ((n = SDL_PeepEvents(events, SDL_arraysize(events), SDL_GETEVENT, SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED)) > 0) {
+		for (i = 0; i < n; ++i) {
+			SDL_Event *event = &events[i];
+			switch (event->type) {
+			case SDL_EVENT_GAMEPAD_ADDED:
+				add_gamepad(event->gdevice.which);
+				obs_log(LOG_INFO, "Gamepad added %d", event->gdevice.which);
+				break;
+			case SDL_EVENT_GAMEPAD_REMOVED:
+				remove_gamepad(event->gdevice.which);
+				obs_log(LOG_INFO, "Gamepad removed %d", event->gdevice.which);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
+
+void GamepadDevice::polling_loop()
+{
 	while (m_should_poll) {
 		polling_iter();
 		SDL_Delay(2);

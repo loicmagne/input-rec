@@ -1,6 +1,6 @@
 #pragma once
-#include "plugin-support.h"
 #include <obs-module.h>
+#include "plugin-support.h"
 
 class InputWriter; // necessary forward declaration
 class InputDevice {
