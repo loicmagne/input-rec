@@ -83,6 +83,7 @@ int GamepadDevice::get_gamepad_idx(SDL_JoystickID joystickid)
 
 SDL_Gamepad *GamepadDevice::active_gamepad()
 {
+	std::lock_guard<std::mutex> lock(m_gamepads_mutex);
 	for (auto gamepad : m_gamepads) {
 		if (gamepad) { return gamepad; }
 	}
@@ -133,24 +134,45 @@ GamepadDevice::GamepadDevice()
 	*/
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-	// Init gamepads
-	int count = 0;
-	SDL_JoystickID *joystick_ids = SDL_GetGamepads(&count);
-	if (joystick_ids) {
-		for (int i = 0; i < count; ++i) {
-			add_gamepad(joystick_ids[i]);
-			std::cout << "Gamepad added: " << joystick_ids[i] << std::endl;
-		}
-		SDL_free(joystick_ids);
-	} else {
-		std::cerr << "Failed to get gamepads: " << SDL_GetError() << std::endl;
-	}
+    m_should_poll = true;
+    m_polling_thread = std::thread(&GamepadDevice::polling_loop, this);
 }
 
 GamepadDevice::~GamepadDevice()
 {
+	m_should_poll = false;
+	if (m_polling_thread.joinable()) m_polling_thread.join();
 	for (auto gamepad : m_gamepads) { SDL_CloseGamepad(gamepad); }
 	SDL_Quit();
+}
+
+void GamepadDevice::polling_iter()
+{
+	SDL_Event event;
+	SDL_PumpEvents();
+
+	std::lock_guard<std::mutex> lock(m_gamepads_mutex); // lock the gamepads vector for the whole iteration
+	while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
+		switch (event.type) {
+		case SDL_EVENT_GAMEPAD_ADDED:
+			add_gamepad(event.gdevice.which);
+			std::cout << "[input-rec] Gamepad added" << std::endl;
+			break;
+		case SDL_EVENT_GAMEPAD_REMOVED:
+			remove_gamepad(event.gdevice.which);
+			std::cout << "[input-rec] Gamepad removed" << std::endl;
+			break;
+		default: break;
+		}
+	}
+}
+
+void GamepadDevice::polling_loop()
+{
+	while (m_should_poll) {
+		polling_iter();
+		SDL_Delay(2);
+	}
 }
 
 void GamepadDevice::write_header(InputWriter &writer)
@@ -183,26 +205,4 @@ void GamepadDevice::write_state(InputWriter &writer)
 		}
 		writer.end_row();
 	}
-}
-
-void GamepadDevice::loop(InputWriter &writer)
-{
-	SDL_Event event;
-	SDL_PumpEvents();
-	while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
-		switch (event.type) {
-		case SDL_EVENT_GAMEPAD_ADDED:
-			add_gamepad(event.gdevice.which);
-			std::cout << "Gamepad added" << std::endl;
-			break;
-		case SDL_EVENT_GAMEPAD_REMOVED:
-			remove_gamepad(event.gdevice.which);
-			std::cout << "Gamepad removed" << std::endl;
-			break;
-		default: break;
-		}
-	}
-	write_state(writer);
-	// TODO: delay should be handled by the writer, not the device
-	SDL_Delay(2);
 }

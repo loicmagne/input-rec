@@ -57,9 +57,6 @@ class InputWriter {
 protected:
 	RecTimer m_timer;
 	std::thread m_thread_loop;
-	/* dependency injection of an InputDevice
-	each InputWriter have a reference to an InputDevice
-	which they use to get the state of an input device */
 	std::unique_ptr<InputDevice> m_device;
 
 public:
@@ -77,7 +74,10 @@ public:
 		m_timer.start();
 
 		m_thread_loop = std::thread([this]() {
-			while (m_timer.running) m_device->loop(*this);
+			while (m_timer.running) {
+				m_device->write_state(*this);
+				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			}
 		});
 	}
 	void stop_recording()
