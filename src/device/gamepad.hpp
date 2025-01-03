@@ -9,9 +9,9 @@
 class GamepadDevice : public InputDevice {
 private:
 	std::vector<SDL_Gamepad *> m_gamepads;
-    std::mutex m_gamepads_mutex;
+	std::mutex m_gamepads_mutex;
 	SDL_Thread *m_polling_thread;
-    std::atomic<bool> m_should_poll;
+	std::atomic<bool> m_should_poll;
 
 	void add_gamepad(SDL_JoystickID joystickid);
 	void remove_gamepad(SDL_JoystickID joystickid);
