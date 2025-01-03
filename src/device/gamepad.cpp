@@ -139,10 +139,12 @@ GamepadDevice::GamepadDevice() : m_should_poll(true)
 	*/
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-	m_polling_thread = SDL_CreateThread([](void *data) -> int {
-		static_cast<GamepadDevice *>(data)->polling_loop();
-		return 0;
-	}, "SDL Gamepad capture", this);
+	m_polling_thread = SDL_CreateThread(
+		[](void *data) -> int {
+			static_cast<GamepadDevice *>(data)->polling_loop();
+			return 0;
+		},
+		"SDL Gamepad capture", this);
 }
 
 GamepadDevice::~GamepadDevice()
@@ -160,7 +162,8 @@ void GamepadDevice::polling_iter()
 	SDL_UpdateGamepads();
 
 	std::lock_guard<std::mutex> lock(m_gamepads_mutex); // lock the gamepads vector for the whole iteration
-	while ((n = SDL_PeepEvents(events, SDL_arraysize(events), SDL_GETEVENT, SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED)) > 0) {
+	while ((n = SDL_PeepEvents(events, SDL_arraysize(events), SDL_GETEVENT, SDL_EVENT_GAMEPAD_AXIS_MOTION,
+				   SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED)) > 0) {
 		for (i = 0; i < n; ++i) {
 			SDL_Event *event = &events[i];
 			switch (event->type) {
@@ -172,8 +175,7 @@ void GamepadDevice::polling_iter()
 				remove_gamepad(event->gdevice.which);
 				obs_log(LOG_INFO, "Gamepad removed %d", event->gdevice.which);
 				break;
-			default:
-				break;
+			default: break;
 			}
 		}
 	}
