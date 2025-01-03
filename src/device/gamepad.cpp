@@ -53,6 +53,10 @@ std::string button_to_string(SDL_GamepadButton button)
 
 void GamepadDevice::add_gamepad(SDL_JoystickID joystickid)
 {
+	// Return if the gamepad is already opened
+	int idx = get_gamepad_idx(joystickid);
+	if (idx >= 0 && m_gamepads[idx]) { return; }
+
 	SDL_Gamepad *gamepad = SDL_OpenGamepad(joystickid);
 	if (gamepad) {
 		m_gamepads.push_back(gamepad);
