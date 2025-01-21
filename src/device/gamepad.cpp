@@ -58,10 +58,16 @@ void GamepadDevice::add_gamepad(SDL_JoystickID joystickid)
 	if (idx >= 0 && m_gamepads[idx]) { return; }
 
 	SDL_Gamepad *gamepad = SDL_OpenGamepad(joystickid);
-	if (gamepad) {
-		m_gamepads.push_back(gamepad);
+
+	if (!gamepad) {
+		obs_log(LOG_ERROR, "Failed to open gamepad: %s", SDL_GetError());
+		return;
+	}
+
+	if (idx >= 0) {
+		m_gamepads[idx] = gamepad;
 	} else {
-		std::cerr << "Failed to open gamepad: " << SDL_GetError() << std::endl;
+		m_gamepads.push_back(gamepad);
 	}
 }
 
@@ -88,10 +94,12 @@ int GamepadDevice::get_gamepad_idx(SDL_JoystickID joystickid)
 SDL_Gamepad *GamepadDevice::active_gamepad()
 {
 	std::lock_guard<std::mutex> lock(m_gamepads_mutex);
+	// Get the latest connected gamepad
+	SDL_Gamepad *active_gamepad = nullptr;
 	for (auto gamepad : m_gamepads) {
-		if (gamepad) { return gamepad; }
+		if (gamepad) { active_gamepad = gamepad; }
 	}
-	return nullptr;
+	return active_gamepad;
 }
 
 GamepadDevice::GamepadDevice() : m_should_poll(true)
@@ -105,6 +113,7 @@ GamepadDevice::GamepadDevice() : m_should_poll(true)
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_LINUX_DEADZONES, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH_HOME_LED, "1");
+	SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT, "0");
 
 	/* Enable input debug logging */
 	SDL_SetLogPriority(SDL_LOG_CATEGORY_INPUT, SDL_LOG_PRIORITY_DEBUG);
