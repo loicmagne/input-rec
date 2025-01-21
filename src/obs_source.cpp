@@ -14,43 +14,49 @@ private:
 	obs_data_t *m_settings;
 	obs_source_t *m_source;
 	std::unique_ptr<InputWriter> m_input_writer;
+	obs_frontend_event_cb m_event_callback;
 
 public:
 	RecSource(obs_data_t *settings, obs_source_t *source)
 		: m_settings{settings},
 		  m_source{source},
-		  m_input_writer{std::make_unique<ParquetWriter>(std::make_unique<GamepadDevice>())}
+		  m_input_writer{std::make_unique<CSVWriter>(std::make_unique<GamepadDevice>())}
 	{
-		obs_frontend_add_event_callback(
-			[](enum obs_frontend_event event, void *private_data) {
-				InputWriter *current_writer = static_cast<InputWriter *>(private_data);
-				switch (event) {
-				case OBS_FRONTEND_EVENT_RECORDING_STARTING: {
-					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTING received");
-					current_writer->prepare_recording();
-					break;
-				}
-				case OBS_FRONTEND_EVENT_RECORDING_STARTED: {
-					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTED received");
-					current_writer->start_recording();
-					break;
-				}
-				case OBS_FRONTEND_EVENT_RECORDING_STOPPING: {
-					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
-					current_writer->stop_recording();
-					break;
-				}
-				case OBS_FRONTEND_EVENT_RECORDING_STOPPED: {
-					obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPED received");
-					// Get last recording path
-					std::string recording_path{obs_frontend_get_last_recording()};
-					current_writer->close_recording(recording_path);
-					break;
-				}
-				default: break;
-				}
-			},
-			m_input_writer.get());
+
+		m_event_callback = [](enum obs_frontend_event event, void *private_data) {
+			InputWriter *current_writer = static_cast<InputWriter *>(private_data);
+			switch (event) {
+			case OBS_FRONTEND_EVENT_RECORDING_STARTING: {
+				obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTING received");
+				current_writer->prepare_recording();
+				break;
+			}
+			case OBS_FRONTEND_EVENT_RECORDING_STARTED: {
+				obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STARTED received");
+				current_writer->start_recording();
+				break;
+			}
+			case OBS_FRONTEND_EVENT_RECORDING_STOPPING: {
+				obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPING received");
+				current_writer->stop_recording();
+				break;
+			}
+			case OBS_FRONTEND_EVENT_RECORDING_STOPPED: {
+				obs_log(LOG_INFO, "OBS_FRONTEND_EVENT_RECORDING_STOPPED received");
+				// Get last recording path
+				std::string recording_path{obs_frontend_get_last_recording()};
+				current_writer->close_recording(recording_path);
+				break;
+			}
+			default: break;
+			}
+		};
+		obs_frontend_add_event_callback(m_event_callback, m_input_writer.get());
+	}
+
+	~RecSource()
+	{
+		obs_frontend_remove_event_callback(m_event_callback, m_input_writer.get());
 	}
 
 	void tick(float seconds) { UNUSED_PARAMETER(seconds); }

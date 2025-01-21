@@ -137,7 +137,7 @@ GamepadDevice::GamepadDevice() : m_should_poll(true)
 	reported on the input-overlay repo: https://github.com/univrsal/input-overlay/issues/426
 	The issue also occurs when using the obs input-overlay plugin only, without input-rec.
 	*/
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	// std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 
 	m_polling_thread = SDL_CreateThread(
 		[](void *data) -> int {
