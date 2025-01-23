@@ -13,6 +13,7 @@ Add the `Input Recording` source:
 That's it! Now every time you record, a `.parquet` file will be created with the same name as your recording, containing the state of your gamepad recorded at 500Hz. This will also work if you disconnect your gamepad midway, connect a new one etc.
 
 ## TODOs:
-- [ ] Support keyboard recordings
+- [ ] Support mouse/keyboard recordings
 - [ ] Add a GUI to select output format and input device to be recorded
-- [ ] Add a visual indicator to verify that recording is working 
+- [ ] Add a visual indicator to verify that recording is working
+- [ ] Fix macOS
