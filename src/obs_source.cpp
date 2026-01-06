@@ -4,6 +4,9 @@
 
 #include "device/input_device.hpp"
 #include "device/gamepad.hpp"
+#ifdef _WIN32
+#include "device/windows_input.hpp"
+#endif
 #include "writer/input_writer.hpp"
 #include "writer/csv.hpp"
 #include "writer/parquet.hpp"
@@ -17,6 +20,7 @@
 
 // Settings values
 #define DEVICE_GAMEPAD "gamepad"
+#define DEVICE_MOUSE_KEYBOARD "mouse_keyboard"
 #define FORMAT_PARQUET "parquet"
 #define FORMAT_CSV "csv"
 #define FORMAT_DEBUG "debug"
@@ -30,7 +34,12 @@ private:
 
 	static std::unique_ptr<InputDevice> create_device(const char *type)
 	{
-		// Currently only gamepad is supported
+#ifdef _WIN32
+		if (strcmp(type, DEVICE_MOUSE_KEYBOARD) == 0) {
+			return std::make_unique<WindowsInputDevice>();
+		}
+#endif
+		// Default to gamepad
 		return std::make_unique<GamepadDevice>();
 	}
 
@@ -119,6 +128,9 @@ static obs_properties_t *rec_source_properties(void *data)
 							      obs_module_text("InputDevice"), OBS_COMBO_TYPE_LIST,
 							      OBS_COMBO_FORMAT_STRING);
 	obs_property_list_add_string(device_list, obs_module_text("Gamepad"), DEVICE_GAMEPAD);
+#ifdef _WIN32
+	obs_property_list_add_string(device_list, obs_module_text("MouseKeyboard"), DEVICE_MOUSE_KEYBOARD);
+#endif
 	obs_property_set_enabled(device_list, !recording);
 
 	// Output format dropdown

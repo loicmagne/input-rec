@@ -9,8 +9,11 @@ private:
 	std::vector<bool> m_prev_button_states;
 	std::vector<std::string> m_axis_names;
 	std::vector<int16_t> m_prev_axis_values;
+	std::vector<std::string> m_string_names;
+	std::vector<std::string> m_prev_string_values;
 	size_t m_current_button_idx;
 	size_t m_current_axis_idx;
+	size_t m_current_string_idx;
 
 public:
 	DebugWriter(std::unique_ptr<InputDevice> device);
@@ -26,8 +29,10 @@ public:
 	void append_header(const bool &value, const std::string &name) override;
 	void append_header(const int16_t &value, const std::string &name) override;
 	void append_header(const int64_t &value, const std::string &name) override;
+	void append_header(const std::string &value, const std::string &name) override;
 
 	void append_row(const bool &value) override;
 	void append_row(const int16_t &value) override;
 	void append_row(const int64_t &value) override;
+	void append_row(const std::string &value) override;
 };

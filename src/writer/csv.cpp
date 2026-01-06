@@ -44,7 +44,25 @@ void CSVWriter::end_row() { m_file << std::endl; }
 void CSVWriter::append_header(const bool &value, const std::string &name) { m_file << name << ","; }
 void CSVWriter::append_header(const int16_t &value, const std::string &name) { m_file << name << ","; }
 void CSVWriter::append_header(const int64_t &value, const std::string &name) { m_file << name << ","; }
+void CSVWriter::append_header(const std::string &value, const std::string &name) { m_file << name << ","; }
 
 void CSVWriter::append_row(const bool &value) { m_file << value << ","; }
 void CSVWriter::append_row(const int16_t &value) { m_file << value << ","; }
 void CSVWriter::append_row(const int64_t &value) { m_file << value << ","; }
+void CSVWriter::append_row(const std::string &value)
+{
+	// CSV escape: if string contains comma, quote, or newline, wrap in quotes and escape internal quotes
+	bool needs_quotes = value.find_first_of(",\"\n\r") != std::string::npos;
+	if (needs_quotes) {
+		m_file << '"';
+		for (char c : value) {
+			if (c == '"')
+				m_file << "\"\"";
+			else
+				m_file << c;
+		}
+		m_file << "\",";
+	} else {
+		m_file << value << ",";
+	}
+}

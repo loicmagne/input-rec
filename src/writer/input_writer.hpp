@@ -52,7 +52,7 @@ public:
 	}
 };
 
-using SupportedTypes = std::variant<bool, int16_t, int64_t>;
+using SupportedTypes = std::variant<bool, int16_t, int64_t, std::string>;
 class InputWriter {
 protected:
 	RecTimer m_timer;
@@ -97,10 +97,12 @@ public:
 	virtual void append_header(const bool &value, const std::string &name) = 0;
 	virtual void append_header(const int16_t &value, const std::string &name) = 0;
 	virtual void append_header(const int64_t &value, const std::string &name) = 0;
+	virtual void append_header(const std::string &value, const std::string &name) = 0;
 
 	virtual void append_row(const bool &value) = 0;
 	virtual void append_row(const int16_t &value) = 0;
 	virtual void append_row(const int64_t &value) = 0;
+	virtual void append_row(const std::string &value) = 0;
 
 	/* The following functions are just there to check that the overloads of
 	append_header and append_row cover all the supported types, if it isn't the

@@ -25,8 +25,10 @@ public:
 	void append_header(const bool &value, const std::string &name) override;
 	void append_header(const int16_t &value, const std::string &name) override;
 	void append_header(const int64_t &value, const std::string &name) override;
+	void append_header(const std::string &value, const std::string &name) override;
 
 	void append_row(const bool &value) override;
 	void append_row(const int16_t &value) override;
 	void append_row(const int64_t &value) override;
+	void append_row(const std::string &value) override;
 };
