@@ -54,3 +54,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE DuckDB::duckdb)
 if(WIN32)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE DUCKDB_STATIC_BUILD)
 endif()
+
+# Linux X11/XInput2 dependencies for mouse/keyboard capture
+if(UNIX AND NOT APPLE)
+  find_package(X11 REQUIRED)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${X11_LIBRARIES} ${X11_Xi_LIB})
+  target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
+endif()

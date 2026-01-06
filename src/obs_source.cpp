@@ -6,6 +6,8 @@
 #include "device/gamepad.hpp"
 #ifdef _WIN32
 #include "device/windows_input.hpp"
+#elif defined(__linux__)
+#include "device/linux_input.hpp"
 #endif
 #include "writer/input_writer.hpp"
 #include "writer/csv.hpp"
@@ -37,6 +39,10 @@ private:
 #ifdef _WIN32
 		if (strcmp(type, DEVICE_MOUSE_KEYBOARD) == 0) {
 			return std::make_unique<WindowsInputDevice>();
+		}
+#elif defined(__linux__)
+		if (strcmp(type, DEVICE_MOUSE_KEYBOARD) == 0) {
+			return std::make_unique<LinuxInputDevice>();
 		}
 #endif
 		// Default to gamepad
@@ -128,7 +134,7 @@ static obs_properties_t *rec_source_properties(void *data)
 							      obs_module_text("InputDevice"), OBS_COMBO_TYPE_LIST,
 							      OBS_COMBO_FORMAT_STRING);
 	obs_property_list_add_string(device_list, obs_module_text("Gamepad"), DEVICE_GAMEPAD);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 	obs_property_list_add_string(device_list, obs_module_text("MouseKeyboard"), DEVICE_MOUSE_KEYBOARD);
 #endif
 	obs_property_set_enabled(device_list, !recording);
