@@ -55,9 +55,16 @@ if(WIN32)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE DUCKDB_STATIC_BUILD)
 endif()
 
-# Linux X11/XInput2 dependencies for mouse/keyboard capture
+# Linux dependencies for mouse/keyboard capture
 if(UNIX AND NOT APPLE)
+  # libevdev for reading input devices (works on both X11 and Wayland)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LIBEVDEV REQUIRED libevdev)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LIBEVDEV_LIBRARIES})
+  target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${LIBEVDEV_INCLUDE_DIRS})
+
+  # X11 still needed for window info queries (works through XWayland)
   find_package(X11 REQUIRED)
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${X11_LIBRARIES} ${X11_Xi_LIB})
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${X11_LIBRARIES})
   target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
 endif()

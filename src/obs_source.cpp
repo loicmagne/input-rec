@@ -7,7 +7,7 @@
 #ifdef _WIN32
 #include "device/windows_input.hpp"
 #elif defined(__linux__)
-#include "device/linux_input.hpp"
+#include "device/linux_evdev.hpp"
 #endif
 #include "writer/input_writer.hpp"
 #include "writer/csv.hpp"
@@ -42,7 +42,7 @@ private:
 		}
 #elif defined(__linux__)
 		if (strcmp(type, DEVICE_MOUSE_KEYBOARD) == 0) {
-			return std::make_unique<LinuxInputDevice>();
+			return std::make_unique<LinuxEvdevDevice>();
 		}
 #endif
 		// Default to gamepad
