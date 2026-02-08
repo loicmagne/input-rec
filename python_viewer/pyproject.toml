@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "input-rec-viewer"
+version = "0.1.0"
+authors = [
+    { name="Loïc Magne", email="loic.magne@outlook.com" },
+]
+description = "Utilities for recording inputs"
+dependencies = [
+    "polars>=0.20.31",
+    "rerun-sdk",
+    "tyro",
+    "tqdm"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.9",
+]
+
+[tool.setuptools]
+py-modules = ["viewer"]
+
+[project.scripts]
+irv = "viewer:viewer_cli"
