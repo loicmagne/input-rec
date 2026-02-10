@@ -18,6 +18,7 @@
 !README.md
 !Makefile
 !/irec
+!/python_viewer
 
 # Exclude lock files
 *.lock.json

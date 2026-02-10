@@ -204,6 +204,134 @@ def mkb_viewer(cfg):
 
     rr.send_blueprint(blueprint)
 
+PAD_KEYS = ['SOUTH', 'EAST', 'WEST', 'NORTH', 'BACK', 'GUIDE', 'START', 'LEFT_STICK', 'RIGHT_STICK', 'LEFT_SHOULDER', 'RIGHT_SHOULDER', 'DPAD_UP', 'DPAD_DOWN', 'DPAD_LEFT', 'DPAD_RIGHT', 'MISC1', 'RIGHT_PADDLE1', 'LEFT_PADDLE1', 'RIGHT_PADDLE2', 'LEFT_PADDLE2']
+
+def pad_viewer(cfg):
+    rr.init("input-rec-pad-viewer", spawn=True)
+
+    # Log video as static data (logged once)
+    video_asset = rr.AssetVideo(path=cfg.path_mp4)
+    rr.log("video", video_asset, static=True)
+    
+    # Get video frame timestamps
+    frame_timestamps_ns = video_asset.read_frame_timestamps_nanos()
+    
+    # Log VideoFrameReferences to sync video with timeline
+    rr.send_columns(
+        "video",
+        indexes=[rr.TimeColumn("time", duration=1e-9 * frame_timestamps_ns)],
+        columns=rr.VideoFrameReference.columns_nanos(frame_timestamps_ns),
+    )
+
+    # log actions 
+    df = pl.read_parquet(cfg.path_parquet)
+
+    if cfg.max_duration_seconds is not None:
+        max_time_us = cfg.max_duration_seconds * 1_000_000
+        max_index = df["time"].search_sorted(max_time_us)
+        df = df[:max_index+1]
+        print(f"Filtered annotations to {cfg.max_duration_seconds}s: {len(df)} rows")
+    
+
+    prev_row = None
+    for row in tqdm(df.rows(named=True)):
+        time = row["time"] / 1_000_000 # microseconds to seconds
+        rr.set_time("time", duration=time)
+
+        x_left = row["LEFTX"] / 32767
+        y_left = row["LEFTY"] / 32767
+        x_right = row["RIGHTX"] / 32767
+        y_right = row["RIGHTY"] / 32767
+
+        rr.log(
+            "/joystick/left",
+            rr.Arrows2D(
+                origins=[[0, 1], [-1, 0], [0, 0]],
+                vectors=[[0, -2], [2, 0], [x_left, y_left]],
+                colors=[[127, 127, 127], [127, 127, 127], [251, 44, 54]],
+                radii=[0.01,0.01,0.025],
+            ),
+        )
+        rr.log(
+            "/joystick/right",
+            rr.Arrows2D(
+                origins=[[0, 1], [-1, 0], [0, 0]],
+                vectors=[[0, -2], [2, 0], [x_right, y_right]],
+                colors=[[127, 127, 127], [127, 127, 127], [251, 44, 54]],
+                radii=[0.01,0.01,0.025],
+            ),
+        )
+
+
+        if prev_row is not None:
+            for key in PAD_KEYS:
+                color = (0, 166, 244)
+                if prev_row[key] != row[key]:
+                    if row[key]:
+                        rr.log("event_log/key", rr.TextLog(f"{key} pressed", level=rr.TextLogLevel.INFO, color=color))
+                    else:
+                        rr.log("event_log/key", rr.TextLog(f"{key} released", level=rr.TextLogLevel.INFO, color=color))      
+
+            for key in ['LEFT_TRIGGER', 'RIGHT_TRIGGER']:
+                if prev_row[key] != row[key]:
+                    rr.log("event_log/key", rr.TextLog(f"{key} state changed: {row[key] / 32767}", level=rr.TextLogLevel.INFO, color=(251, 44, 54)))
+
+
+        prev_row = row
+
+    blueprint = rrb.Blueprint(
+        
+        rrb.Grid(
+            rrb.Horizontal(
+                contents=[
+                    rrb.Spatial2DView(
+                        origin="/video",
+                        name="Video Player with mouse",
+                        background=(0,0,0),
+                        visual_bounds=rrb.VisualBounds2D(x_range=[0, 1920], y_range=[0, 1080]),
+                    ),
+
+                    rrb.Horizontal(
+                        contents=[
+                            rrb.Spatial2DView(
+                                origin="/joystick/left",
+                                name="Left joystick",
+                                background=(0,0,0),
+                                visual_bounds=rrb.VisualBounds2D(x_range=[-1, 1], y_range=[-1, 1]),
+                            ),
+
+                            rrb.Spatial2DView(
+                                origin="/joystick/right",
+                                name="Right joystick",
+                                background=(0,0,0),
+                                visual_bounds=rrb.VisualBounds2D(x_range=[-1, 1], y_range=[-1, 1]),
+                            ),
+                        ]
+                    ),
+                ]
+            ),
+            rrb.TextLogView(
+                origin="/event_log",
+                name="Event Logs",
+                columns=rrb.TextLogColumns(
+                    timeline_columns=["time"],
+                    text_log_columns=["body"],
+                ),
+                rows=rrb.TextLogRows(
+                    filter_by_log_level=["INFO", "WARN", "ERROR"],
+                ),
+                format_options=rrb.TextLogFormat(
+                    monospace_body=False,
+                ),
+            ),
+            grid_columns=1
+        ),
+        collapse_panels=True,
+    )
+
+    rr.send_blueprint(blueprint)
+
+
 def viewer(cfg):
     # Check if the parquet file is a gamepad of keyboard file
     df = pl.read_parquet(cfg.path_parquet)
@@ -211,7 +339,7 @@ def viewer(cfg):
     if "mouse_x" in df.columns:
         mkb_viewer(cfg)
     elif "DPAD_UP" in df.columns:
-        raise NotImplementedError("Gamepad viewer not implemented")
+        pad_viewer(cfg)
     else:
         raise RuntimeError(f"Unknown parquet file format: {df.columns}")
 
